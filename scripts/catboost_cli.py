@@ -32,6 +32,7 @@ def train(arguments):
     )
     print("Saving model")
     model.save_model(arguments.model_filepath)
+    print(f"Model saved to {str(arguments.model_filepath)}")
 
 
 def test(arguments):

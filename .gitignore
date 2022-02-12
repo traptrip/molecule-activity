@@ -1,6 +1,8 @@
 # Data
 **.csv
 **.pdb
+catboost_info/
+*.cbm
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
