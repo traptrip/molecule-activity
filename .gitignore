@@ -1,6 +1,8 @@
 # Data
 **.csv
 **.pdb
+**.zip
+**.mol
 catboost_info/
 *.cbm
 
