@@ -41,10 +41,12 @@ def test(arguments):
     print("Predicting")
     model.load_model(arguments.model_filepath)
     pred = model.predict(df)
+
+    df = pd.read_csv(arguments.base_data_path)
     df["Active"] = pred
     df["Active"] = df["Active"].astype(bool)
-    df.to_csv("submission.csv")
-    print("Saved submittion to submission.csv")
+    df.to_csv("submission.csv", index=False)
+    print("Saved submission to submission.csv")
 
 
 def setup_parser(parser):
@@ -66,7 +68,9 @@ def setup_parser(parser):
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
     test_parser.set_defaults(callback=test)
+    test_parser.add_argument("-b", "--base_data_path", default=Path("./data/base/test.csv"), type=Path)
     test_parser.add_argument("-d", "--data_path", default=Path("./data/test.csv"), type=Path)
+    test_parser.add_argument("-s", "--submit_path", default=Path("./submission.csv"), type=Path)
     test_parser.add_argument("-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path)
 
 
