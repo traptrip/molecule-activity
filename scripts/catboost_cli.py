@@ -54,8 +54,8 @@ def setup_parser(parser):
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
     train_parser.set_defaults(callback=train)
-    train_parser.add_argument("-d", "--data_path", default=Path("../data/train.csv"), type=Path)
-    train_parser.add_argument("-m", "--model_filepath", default=Path("../models/model.cbm"), type=Path)
+    train_parser.add_argument("-d", "--data_path", default=Path("./data/train.csv"), type=Path)
+    train_parser.add_argument("-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path)
 
     test_parser = subparsers.add_parser(
         "test",
@@ -63,8 +63,8 @@ def setup_parser(parser):
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
     test_parser.set_defaults(callback=test)
-    test_parser.add_argument("-d", "--data_path", default=Path("../data/test.csv"), type=Path)
-    test_parser.add_argument("-m", "--model_filepath", default=Path("../models/model.cbm"), type=Path)
+    test_parser.add_argument("-d", "--data_path", default=Path("./data/test.csv"), type=Path)
+    test_parser.add_argument("-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path)
 
 
 def main():
