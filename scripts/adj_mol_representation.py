@@ -70,7 +70,7 @@ def get_match_dict(atoms_list: list, available_numbers: dict) -> dict:
     match_dict = dict()
     for idx in range(len(atoms_list)):
         atom_symb = atoms_list[idx].GetSymbol()
-        atom_number = choice(available_numbers[atom_symb])
+        atom_number = available_numbers[atom_symb][0]  # atom_number = choice(available_numbers[atom_symb])
         match_dict[idx] = f"{atom_symb}_{atom_number}"
         available_numbers[atom_symb].remove(atom_number)
 
