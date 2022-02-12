@@ -36,12 +36,15 @@ def train(arguments):
 
 
 def test(arguments):
+    print("Reading Dataset")
     df = pd.read_csv(arguments.data_path)
+    print("Predicting")
     model.load_model(arguments.model_filepath)
     pred = model.predict(df)
     df["Active"] = pred
     df["Active"] = df["Active"].astype(bool)
     df.to_csv("submission.csv")
+    print("Saved submittion to submission.csv")
 
 
 def setup_parser(parser):
