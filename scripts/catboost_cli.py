@@ -4,13 +4,12 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from catboost import CatBoostClassifier
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import numpy as np
 
-SEED = 42
+SEED = 1234
 TRAIN_SIZE = 0.2
 
 model = CatBoostClassifier(
-    task_type="GPU",
-    devices='0:1',
     auto_class_weights="SqrtBalanced",
     iterations=3000,
     eval_metric="F1",
@@ -19,9 +18,14 @@ model = CatBoostClassifier(
 
 def train(arguments):
     print("Reading Dataset")
-    df = pd.read_csv(arguments.data_path)
+    df = pd.read_csv(arguments.data_path, dtype='int8') # , engine="pyarrow"
+    df = df.drop_duplicates()
+    
     X_train, X_test, y_train, y_test = train_test_split(
-        df.drop("Active", axis=1), df["Active"].astype(int), test_size=TRAIN_SIZE, random_state=SEED
+        df.drop("Active", axis=1),
+        df["Active"].astype(int),
+        test_size=TRAIN_SIZE,
+        random_state=SEED,
     )
     print("Train Catboost")
     model.fit(
@@ -59,8 +63,12 @@ def setup_parser(parser):
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
     train_parser.set_defaults(callback=train)
-    train_parser.add_argument("-d", "--data_path", default=Path("./data/train.csv"), type=Path)
-    train_parser.add_argument("-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path)
+    train_parser.add_argument(
+        "-d", "--data_path", default=Path("./data/train.csv"), type=Path
+    )
+    train_parser.add_argument(
+        "-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path
+    )
 
     test_parser = subparsers.add_parser(
         "test",
@@ -68,10 +76,18 @@ def setup_parser(parser):
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
     test_parser.set_defaults(callback=test)
-    test_parser.add_argument("-b", "--base_data_path", default=Path("./data/base/test.csv"), type=Path)
-    test_parser.add_argument("-d", "--data_path", default=Path("./data/test.csv"), type=Path)
-    test_parser.add_argument("-s", "--submit_path", default=Path("./submission.csv"), type=Path)
-    test_parser.add_argument("-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path)
+    test_parser.add_argument(
+        "-b", "--base_data_path", default=Path("./data/base/test.csv"), type=Path
+    )
+    test_parser.add_argument(
+        "-d", "--data_path", default=Path("./data/test.csv"), type=Path
+    )
+    test_parser.add_argument(
+        "-s", "--submit_path", default=Path("./submission.csv"), type=Path
+    )
+    test_parser.add_argument(
+        "-m", "--model_filepath", default=Path("./models/model.cbm"), type=Path
+    )
 
 
 def main():
