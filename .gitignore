@@ -4,6 +4,7 @@ models/
 *.png
 *.pdb
 catboost_info/
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
