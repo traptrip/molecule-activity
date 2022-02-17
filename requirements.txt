@@ -1,6 +1,5 @@
 pydot
 pydotplus
-graphviz
 rdkit-pypi==2021.9.4
 tensorflow==2.8.0
 pandas
@@ -9,3 +8,4 @@ scikit-learn
 requests
 jupyter
 notebook
+matplotlib

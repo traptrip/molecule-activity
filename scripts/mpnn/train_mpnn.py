@@ -9,6 +9,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+import tensorflow_addons as tfa
 
 import matplotlib.pyplot as plt
 import warnings
@@ -23,10 +24,10 @@ from scripts.mpnn.dataset import MPNNDataset
 from scripts.mpnn.mpnn import MPNNModel
 
 DATA_PATH = Path("./data")
-SEED = 42
-TRAIN_SIZE = 0.82
+SEED = 1234
+TRAIN_SIZE = 0.9
 BATCH_SIZE = 128
-N_EPOCHS = 10000
+N_EPOCHS = 100000
 CLASS_WEIGHTS = {0: 1, 1: 26}
 
 # Temporary suppress tf logs
@@ -104,14 +105,14 @@ def train():
     # Shuffle array of indices ranging from 0 to df.shape[0]
     permuted_indices = np.random.permutation(np.arange(df.shape[0]))
 
-    # Train set: 80% of data
+    # Train set
     train_index = permuted_indices[: int(df.shape[0] * TRAIN_SIZE)]
     x_train = graphs_from_smiles(
         df.iloc[train_index].Smiles, atom_featurizer, bond_featurizer
     )
     y_train = df.iloc[train_index].Active
 
-    # Valid set: 20 % of data
+    # Valid set
     valid_index = permuted_indices[int(df.shape[0] * TRAIN_SIZE) :]
     x_valid = graphs_from_smiles(
         df.iloc[valid_index].Smiles, atom_featurizer, bond_featurizer
@@ -127,17 +128,27 @@ def train():
         num_attention_heads=8,
         dense_units=512,
     )
-    mpnn.load_weights("./mpnn_300.h5")
+    # mpnn.load_weights("./models/mpnn_5k.h5")
+    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-3, 1e-4])
+    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-4, 1e-5])
+    optimizer = tfa.optimizers.AdamW(
+        # beta_1=0.9,
+        # beta_2=0.98,
+        # epsilon=1e-06,
+        weight_decay=schedule_wd,
+        learning_rate=schedule_lr,
+    )
+
     mpnn.compile(
         loss=keras.losses.BinaryCrossentropy(),
-        optimizer=keras.optimizers.Adam(learning_rate=1e-3),
+        optimizer=optimizer,  # keras.optimizers.Adam(learning_rate=1e-3),
         metrics=[f1],
     )
 
     callbacks = [
-        ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=10, min_lr=4e-5),
+        # ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=10, min_lr=4e-5),
         ModelCheckpoint(
-            filepath=os.path.join("./", f"best_checkpoint.h5"),
+            filepath=os.path.join("./models/", f"mpnn_best.h5"),
             monitor="val_f1",
             save_best_only=True,
             verbose=1,
@@ -149,7 +160,7 @@ def train():
         ),
     ]
 
-    keras.utils.plot_model(mpnn, show_dtype=True, show_shapes=True)
+    # keras.utils.plot_model(mpnn, show_dtype=True, show_shapes=True)
 
     train_dataset = MPNNDataset(x_train, y_train, batch_size=BATCH_SIZE)
     valid_dataset = MPNNDataset(x_valid, y_valid, batch_size=BATCH_SIZE)
@@ -163,7 +174,7 @@ def train():
         callbacks=callbacks,
     )
 
-    mpnn.save_weights("mpnn_10000.h5")
+    mpnn.save_weights("./models/mpnn_1m.h5")
 
     plt.figure(figsize=(10, 6))
     plt.plot(history.history["f1"], label="train f1")
@@ -171,7 +182,7 @@ def train():
     plt.xlabel("Epochs", fontsize=16)
     plt.ylabel("F1", fontsize=16)
     plt.legend(fontsize=16)
-    plt.savefig("history.png")
+    plt.savefig("./models/history.png")
 
 
 if __name__ == "__main__":

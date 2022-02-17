@@ -26,6 +26,8 @@ The message passing step itself consists of two parts:
 Importantly, step (1) and (2) are repeated for k steps, 
 and where at each step 1...k, the radius (or number of hops) of aggregated information from v increases by 1.
 """
+from functools import partial
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -41,7 +43,9 @@ class EdgeNetwork(layers.Layer):
             name="kernel",
         )
         self.bias = self.add_weight(
-            shape=(self.atom_dim * self.atom_dim), initializer="zeros", name="bias",
+            shape=(self.atom_dim * self.atom_dim),
+            initializer="zeros",
+            name="bias",
         )
         self.built = True
 
@@ -143,7 +147,12 @@ class TransformerEncoderReadout(layers.Layer):
         self.partition_padding = PartitionPadding(batch_size)
         self.attention = layers.MultiHeadAttention(num_heads, embed_dim)
         self.dense_proj = keras.Sequential(
-            [layers.Dense(dense_dim, activation="relu"), layers.Dense(embed_dim),]
+            [
+                layers.Dense(
+                    dense_dim, activation=partial(tf.nn.leaky_relu, alpha=0.01)
+                ),
+                layers.Dense(embed_dim),
+            ]
         )
         self.layernorm_1 = layers.LayerNormalization()
         self.layernorm_2 = layers.LayerNormalization()
@@ -182,7 +191,7 @@ def MPNNModel(
         num_attention_heads, message_units, dense_units, batch_size
     )([x, molecule_indicator])
 
-    x = layers.Dense(dense_units, activation="relu")(x)
+    x = layers.Dense(dense_units, activation=partial(tf.nn.leaky_relu, alpha=0.01))(x)
     x = layers.Dense(1, activation="sigmoid")(x)
 
     model = keras.Model(
