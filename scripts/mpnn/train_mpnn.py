@@ -119,6 +119,8 @@ def train():
     )
     y_valid = df.iloc[valid_index].Active
 
+    print("Atom dim:", x_train[0][0][0].shape[0])
+    print("Bond dim:", x_train[1][0][0].shape[0])
     mpnn = MPNNModel(
         atom_dim=x_train[0][0][0].shape[0],
         bond_dim=x_train[1][0][0].shape[0],
@@ -148,7 +150,7 @@ def train():
     callbacks = [
         # ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=10, min_lr=4e-5),
         ModelCheckpoint(
-            filepath=os.path.join("./models/", f"mpnn_best.h5"),
+            filepath=os.path.join("./models/", f"mpnn_lstm_best.h5"),
             monitor="val_f1",
             save_best_only=True,
             verbose=1,

@@ -84,6 +84,8 @@ class MessagePassing(layers.Layer):
         self.message_step = EdgeNetwork()
         self.pad_length = max(0, self.units - self.atom_dim)
         self.update_step = layers.GRUCell(self.atom_dim + self.pad_length)
+        # !TODO try LSTMCell
+        # self.update_step = layers.LSTMCell(self.atom_dim + self.pad_length)
         self.built = True
 
     def call(self, inputs):
