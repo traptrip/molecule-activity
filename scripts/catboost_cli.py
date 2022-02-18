@@ -5,7 +5,7 @@ from catboost import CatBoostClassifier
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-SEED = 12345
+SEED = 1234
 TRAIN_SIZE = 0.2
 
 model = CatBoostClassifier(
@@ -17,7 +17,7 @@ model = CatBoostClassifier(
 
 def train(arguments):
     print("Reading Dataset")
-    df = pd.read_csv(arguments.data_path, engine="pyarrow")
+    df = pd.read_csv(arguments.data_path)  # , engine="pyarrow"
     X_train, X_test, y_train, y_test = train_test_split(
         df.drop("Active", axis=1),
         df["Active"].astype(int),
