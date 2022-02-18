@@ -24,9 +24,7 @@ from scripts.mpnn.mpnn import MPNNModel
 
 DATA_PATH = Path("./data")
 SEED = 42
-TRAIN_SIZE = 0.82
 BATCH_SIZE = 128
-N_EPOCHS = 10000
 CLASS_WEIGHTS = {0: 1, 1: 26}
 THRESHOLD = 0.8
 
@@ -36,7 +34,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 warnings.filterwarnings("ignore")
 RDLogger.DisableLog("rdApp.*")
 df_train = pd.read_csv(DATA_PATH / "base/train.csv")
-print("Threshold -", THRESHOLD)
+print("\nThreshold -", THRESHOLD)
 print("\nTRAIN")
 print(df_train.Active.value_counts(normalize=True))
 
@@ -117,7 +115,7 @@ def test():
         num_attention_heads=8,
         dense_units=512,
     )
-    mpnn.load_weights("./models/mpnn_best_0.4.h5")
+    mpnn.load_weights("./models/mpnn_best.h5")
     test_dataset = MPNNDataset(x_test, y_test, batch_size=BATCH_SIZE)
     y_pred = [
         1 if y > THRESHOLD else 0
@@ -129,7 +127,7 @@ def test():
     print("\nTEST")
     print(df.Active.value_counts(normalize=True))
 
-    df.to_csv(f"submission_mpnn_0.4_thresh_{THRESHOLD}.csv", index=False)
+    df.to_csv(f"submission_mpnn_43380_thresh_{THRESHOLD}.csv", index=False)
 
 
 if __name__ == "__main__":
