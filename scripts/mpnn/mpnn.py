@@ -27,6 +27,7 @@ Importantly, step (1) and (2) are repeated for k steps,
 and where at each step 1...k, the radius (or number of hops) of aggregated information from v increases by 1.
 """
 from functools import partial
+from re import S
 
 import tensorflow as tf
 from tensorflow import keras
@@ -78,6 +79,16 @@ class MessagePassing(layers.Layer):
         super().__init__(**kwargs)
         self.units = units
         self.steps = steps
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "units": self.units,
+                "steps": self.steps,
+            }
+        )
+        return config
 
     def build(self, input_shape):
         self.atom_dim = input_shape[0][-1]
@@ -146,19 +157,34 @@ class TransformerEncoderReadout(layers.Layer):
     ):
         super().__init__(**kwargs)
 
+        self.num_heads = num_heads
+        self.embed_dim = embed_dim
+        self.dense_dim = dense_dim
+        self.batch_size = batch_size
+
         self.partition_padding = PartitionPadding(batch_size)
         self.attention = layers.MultiHeadAttention(num_heads, embed_dim)
         self.dense_proj = keras.Sequential(
             [
-                layers.Dense(
-                    dense_dim, activation=partial(tf.nn.leaky_relu, alpha=0.01)
-                ),
+                layers.Dense(dense_dim, activation=tf.nn.leaky_relu),
                 layers.Dense(embed_dim),
             ]
         )
         self.layernorm_1 = layers.LayerNormalization()
         self.layernorm_2 = layers.LayerNormalization()
         self.average_pooling = layers.GlobalAveragePooling1D()
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "num_heads": self.num_heads,
+                "embed_dim": self.embed_dim,
+                "dense_dim": self.dense_dim,
+                "batch_size": self.batch_size,
+            }
+        )
+        return config
 
     def call(self, inputs):
         x = self.partition_padding(inputs)
@@ -193,7 +219,7 @@ def MPNNModel(
         num_attention_heads, message_units, dense_units, batch_size
     )([x, molecule_indicator])
 
-    x = layers.Dense(dense_units, activation=partial(tf.nn.leaky_relu, alpha=0.01))(x)
+    x = layers.Dense(dense_units, activation=tf.nn.leaky_relu)(x)
     x = layers.Dense(1, activation="sigmoid")(x)
 
     model = keras.Model(
