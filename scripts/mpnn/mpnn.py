@@ -26,9 +26,6 @@ The message passing step itself consists of two parts:
 Importantly, step (1) and (2) are repeated for k steps, 
 and where at each step 1...k, the radius (or number of hops) of aggregated information from v increases by 1.
 """
-from functools import partial
-from re import S
-
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
