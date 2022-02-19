@@ -134,15 +134,24 @@ def train():
         num_attention_heads=8,
         dense_units=512,
     )
-    # mpnn.load_weights("./models/mpnn_5k.h5")
-    # schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-3, 1e-4])
-    # schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-4, 1e-5])
+    # mpnn.load_weights("./models/mpnn_best.h5")
+
+    # mpnn = tf.keras.models.load_model(
+    #     "./models/mpnn_best.h5",
+    #     custom_objects={
+    #         "MessagePassing": MessagePassing,
+    #         "TransformerEncoderReadout": TransformerEncoderReadout,
+    #         "f1": f1,
+    #     },
+    # )
+    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay([15000], [1e-3, 1e-4])
+    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay([15000], [1e-4, 1e-5])
     optimizer = tfa.optimizers.AdamW(
         # beta_1=0.9,
         # beta_2=0.98,
         # epsilon=1e-06,
-        weight_decay=1e-3,  # schedule_wd,
-        learning_rate=1e-4,  # schedule_lr,
+        weight_decay=schedule_wd,
+        learning_rate=schedule_lr,
     )
 
     mpnn.compile(
