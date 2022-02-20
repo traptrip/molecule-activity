@@ -3,6 +3,7 @@ models/
 *.h5
 *.png
 *.pdb
+*.mol
 catboost_info/
 logs/
 
