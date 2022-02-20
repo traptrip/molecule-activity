@@ -9,6 +9,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+from tensorflow_addons.optimizers import AdamW
 
 import matplotlib.pyplot as plt
 import warnings
@@ -20,13 +21,13 @@ from scripts.mpnn.utils import (
     graphs_from_smiles,
 )
 from scripts.mpnn.dataset import MPNNDataset
-from scripts.mpnn.mpnn import MPNNModel
+from scripts.mpnn.mpnn import MPNNModel, MessagePassing, TransformerEncoderReadout
 
 DATA_PATH = Path("./data")
-SEED = 42
-BATCH_SIZE = 128
+SEED = 1234
+BATCH_SIZE = 256
 CLASS_WEIGHTS = {0: 1, 1: 26}
-THRESHOLD = 0.8
+THRESHOLD = 0.9
 
 # Temporary suppress tf logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -90,6 +91,8 @@ def test():
                 "Mg",
                 "Se",
                 "Zn",
+                "As",
+                "K",
             },
             "n_valence": {0, 1, 2, 3, 4, 5, 6},
             "n_hydrogens": {0, 1, 2, 3, 4},
@@ -106,16 +109,27 @@ def test():
     x_test = graphs_from_smiles(df.Smiles, atom_featurizer, bond_featurizer)
     y_test = [0] * len(df)
 
-    mpnn = MPNNModel(
-        atom_dim=x_test[0][0][0].shape[0],
-        bond_dim=x_test[1][0][0].shape[0],
-        batch_size=BATCH_SIZE,
-        message_units=64,
-        message_steps=4,
-        num_attention_heads=8,
-        dense_units=512,
+    # mpnn = MPNNModel(
+    #     atom_dim=x_test[0][0][0].shape[0],
+    #     bond_dim=x_test[1][0][0].shape[0],
+    #     batch_size=BATCH_SIZE,
+    #     message_units=64,
+    #     message_steps=4,
+    #     num_attention_heads=8,
+    #     dense_units=512,
+    # )
+    # mpnn.load_weights("./models/mpnn_best.h5")
+
+    mpnn = tf.keras.models.load_model(
+        "./models/mpnn_best.h5",
+        custom_objects={
+            "MessagePassing": MessagePassing,
+            "TransformerEncoderReadout": TransformerEncoderReadout,
+            "f1": f1,
+            "AdamW": AdamW,
+        },
     )
-    mpnn.load_weights("./models/mpnn_best.h5")
+
     test_dataset = MPNNDataset(x_test, y_test, batch_size=BATCH_SIZE)
     y_pred = [
         1 if y > THRESHOLD else 0
@@ -127,7 +141,7 @@ def test():
     print("\nTEST")
     print(df.Active.value_counts(normalize=True))
 
-    df.to_csv(f"submission_mpnn_43380_thresh_{THRESHOLD}.csv", index=False)
+    df.to_csv(f"submission_mpnn_thresh_{THRESHOLD}.csv", index=False)
 
 
 if __name__ == "__main__":

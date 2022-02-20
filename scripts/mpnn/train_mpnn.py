@@ -93,6 +93,8 @@ def train():
                 "Mg",
                 "Se",
                 "Zn",
+                "As",
+                "K",
             },
             "n_valence": {0, 1, 2, 3, 4, 5, 6},
             "n_hydrogens": {0, 1, 2, 3, 4},
@@ -125,31 +127,36 @@ def train():
 
     print("Atom dim:", x_train[0][0][0].shape[0])
     print("Bond dim:", x_train[1][0][0].shape[0])
-    mpnn = MPNNModel(
-        atom_dim=x_train[0][0][0].shape[0],
-        bond_dim=x_train[1][0][0].shape[0],
-        batch_size=BATCH_SIZE,
-        message_units=64,
-        message_steps=4,
-        num_attention_heads=8,
-        dense_units=512,
-    )
-    # mpnn.load_weights("./models/mpnn_best.h5")
-
-    # mpnn = tf.keras.models.load_model(
-    #     "./models/mpnn_best.h5",
-    #     custom_objects={
-    #         "MessagePassing": MessagePassing,
-    #         "TransformerEncoderReadout": TransformerEncoderReadout,
-    #         "f1": f1,
-    #     },
+    # mpnn = MPNNModel(
+    #     atom_dim=x_train[0][0][0].shape[0],
+    #     bond_dim=x_train[1][0][0].shape[0],
+    #     batch_size=BATCH_SIZE,
+    #     message_units=64,
+    #     message_steps=4,
+    #     num_attention_heads=8,
+    #     dense_units=512,
     # )
-    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay([15000], [1e-3, 1e-4])
-    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay([15000], [1e-4, 1e-5])
+    # mpnn.load_weights("./models/mpnn_best_0.41_public.h5")
+
+    mpnn = tf.keras.models.load_model(
+        "./models/mpnn_best_53.h5",
+        custom_objects={
+            "MessagePassing": MessagePassing,
+            "TransformerEncoderReadout": TransformerEncoderReadout,
+            "f1": f1,
+            "AdamW": tfa.optimizers.AdamW,
+        },
+    )
+    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay(
+        [5000, 25000], [1e-4, 1e-5, 5e-6]
+    )
+    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay(
+        [5000, 25000], [1e-5, 1e-6, 5e-7]
+    )
     optimizer = tfa.optimizers.AdamW(
-        # beta_1=0.9,
-        # beta_2=0.98,
-        # epsilon=1e-06,
+        beta_1=0.9,
+        beta_2=0.98,
+        epsilon=1e-07,
         weight_decay=schedule_wd,
         learning_rate=schedule_lr,
     )
