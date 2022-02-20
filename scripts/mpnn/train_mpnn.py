@@ -14,7 +14,7 @@ import tensorflow_addons as tfa
 import matplotlib.pyplot as plt
 import warnings
 from rdkit import RDLogger
-
+from sklearn.model_selection import train_test_split
 from scripts.mpnn.utils import (
     AtomFeaturizer,
     BondFeaturizer,
@@ -30,6 +30,7 @@ from scripts.mpnn.mpnn import (
 DATA_PATH = Path("./data")
 SEED = 1234
 TRAIN_SIZE = 0.9
+TEST_SIZE = 1 - TRAIN_SIZE
 BATCH_SIZE = 256
 N_EPOCHS = 100000
 CLASS_WEIGHTS = {0: 1, 1: 26}
@@ -70,8 +71,14 @@ seed_everything(SEED)
 
 
 def train():
-    df = pd.read_csv(DATA_PATH / "base/train.csv").drop("Unnamed: 0", axis=1)
+    # df = pd.read_csv(DATA_PATH / "base/train.csv").drop("Unnamed: 0", axis=1)
+    df = pd.read_csv(DATA_PATH / "raw/train.csv", index_col=0)
     df.Active = df.Active.astype(float)
+    smd_features = pd.read_csv(
+        DATA_PATH / "interim/smd_features/train.csv", index_col=0
+    )
+    smd_features = smd_features.drop("Active", axis=1)
+    df = df.loc[df.index.isin(smd_features.index)]
 
     atom_featurizer = AtomFeaturizer(
         allowable_sets={
@@ -102,7 +109,8 @@ def train():
             },
             "n_valence": {0, 1, 2, 3, 4, 5, 6},
             "n_hydrogens": {0, 1, 2, 3, 4},
-            "hybridization": {"s", "sp", "sp2", "sp3"},
+            "hybridization": {"s", "sp", "sp2", "sp3"},  # TODO: sp3d and sp3d2
+            "smd_features": set(smd_features.columns.to_list()),
         }
     )
     bond_featurizer = BondFeaturizer(
@@ -113,24 +121,38 @@ def train():
     )
 
     # Shuffle array of indices ranging from 0 to df.shape[0]
-    permuted_indices = np.random.permutation(np.arange(df.shape[0]))
+    # permuted_indices = np.random.permutation(np.arange(df.shape[0]))
+    train_index, valid_index, _, _ = train_test_split(
+        df.index.to_list(),
+        df["Active"].astype(int),
+        test_size=TEST_SIZE,
+        random_state=SEED,
+    )
 
     # Train set
-    train_index = permuted_indices[: int(df.shape[0] * TRAIN_SIZE)]
+    # train_index = permuted_indices[: int(df.shape[0] * TRAIN_SIZE)]
     x_train = graphs_from_smiles(
-        df.iloc[train_index].Smiles, atom_featurizer, bond_featurizer
+        train_index, df.loc[train_index].Smiles, atom_featurizer, bond_featurizer
     )
-    y_train = df.iloc[train_index].Active
+    y_train = df.loc[train_index].Active
 
     # Valid set
-    valid_index = permuted_indices[int(df.shape[0] * TRAIN_SIZE) :]
+    # valid_index = permuted_indices[int(df.shape[0] * TRAIN_SIZE) :]
     x_valid = graphs_from_smiles(
-        df.iloc[valid_index].Smiles, atom_featurizer, bond_featurizer
+        valid_index, df.loc[valid_index].Smiles, atom_featurizer, bond_featurizer
     )
-    y_valid = df.iloc[valid_index].Active
+    y_valid = df.loc[valid_index].Active
 
+    # print(atom_featurizer.features_mapping)
+    # print(x_train[0].shape)
+    # print(x_valid[0].shape)
+    # print(x_train[0][1].shape)
+    # print(x_valid[0][1].shape)
+    # print(x_train[0][0][0].shape)
+    # print(x_valid[0][0][0].shape)
     print("Atom dim:", x_train[0][0][0].shape[0])
     print("Bond dim:", x_train[1][0][0].shape[0])
+    return
     mpnn = MPNNModel(
         atom_dim=x_train[0][0][0].shape[0],
         bond_dim=x_train[1][0][0].shape[0],
