@@ -21,12 +21,16 @@ from scripts.mpnn.utils import (
     graphs_from_smiles,
 )
 from scripts.mpnn.dataset import MPNNDataset
-from scripts.mpnn.mpnn import MPNNModel
+from scripts.mpnn.mpnn import (
+    MPNNModel,
+    MessagePassing,
+    TransformerEncoderReadout,
+)
 
 DATA_PATH = Path("./data")
 SEED = 1234
 TRAIN_SIZE = 0.9
-BATCH_SIZE = 128
+BATCH_SIZE = 256
 N_EPOCHS = 100000
 CLASS_WEIGHTS = {0: 1, 1: 26}
 
@@ -67,28 +71,34 @@ seed_everything(SEED)
 
 def train():
     df = pd.read_csv(DATA_PATH / "base/train.csv").drop("Unnamed: 0", axis=1)
-    df.Active = df.Active.astype(int)
+    df.Active = df.Active.astype(float)
 
     atom_featurizer = AtomFeaturizer(
         allowable_sets={
             "symbol": {
-                "B",
-                "Br",
-                "C",
-                "Ca",
                 "Cl",
-                "F",
-                "H",
-                "I",
-                "N",
-                "Na",
-                "O",
-                "P",
                 "S",
-                "Ag",
-                "Mg",
                 "Se",
                 "Zn",
+                "K",
+                "F",
+                "Ag",
+                "P",
+                "N",
+                "Na",
+                "Mg",
+                "C",
+                "Br",
+                "O",
+                "B",
+                "Si",
+                "I",
+                "Ca",
+                "Al",
+                "H",
+                "Sr",
+                "Li",
+                "As",
             },
             "n_valence": {0, 1, 2, 3, 4, 5, 6},
             "n_hydrogens": {0, 1, 2, 3, 4},
@@ -130,13 +140,27 @@ def train():
         num_attention_heads=8,
         dense_units=512,
     )
-    # mpnn.load_weights("./models/mpnn_5k.h5")
-    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-3, 1e-4])
-    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay([10000], [1e-4, 1e-5])
+    # mpnn.load_weights("./models/mpnn_best_0.41_public.h5")
+
+    # mpnn = tf.keras.models.load_model(
+    #     "./models/mpnn_best_53.h5",
+    #     custom_objects={
+    #         "MessagePassing": MessagePassing,
+    #         "TransformerEncoderReadout": TransformerEncoderReadout,
+    #         "f1": f1,
+    #         "AdamW": tfa.optimizers.AdamW,
+    #     },
+    # )
+    schedule_lr = tf.optimizers.schedules.PiecewiseConstantDecay(
+        [5000, 25000], [1e-3, 1e-4, 1e-5]
+    )
+    schedule_wd = tf.optimizers.schedules.PiecewiseConstantDecay(
+        [5000, 25000], [1e-4, 1e-5, 1e-6]
+    )
     optimizer = tfa.optimizers.AdamW(
-        # beta_1=0.9,
-        # beta_2=0.98,
-        # epsilon=1e-06,
+        beta_1=0.9,
+        beta_2=0.98,
+        epsilon=1e-07,
         weight_decay=schedule_wd,
         learning_rate=schedule_lr,
     )
@@ -150,12 +174,28 @@ def train():
     callbacks = [
         # ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=10, min_lr=4e-5),
         ModelCheckpoint(
-            filepath=os.path.join("./models/", f"mpnn_lstm_best.h5"),
+            filepath=os.path.join("./models/", f"mpnn_best.h5"),
             monitor="val_f1",
             save_best_only=True,
             verbose=1,
             mode="max",
-            save_weights_only=True,
+            custom_objects={
+                "MessagePassing": MessagePassing,
+                "TransformerEncoderReadout": TransformerEncoderReadout,
+            }
+            # save_weights_only=True,
+        ),
+        ModelCheckpoint(
+            filepath=os.path.join("./models/", f"mpnn_last.h5"),
+            monitor="val_f1",
+            save_best_only=False,
+            verbose=0,
+            mode="max",
+            custom_objects={
+                "MessagePassing": MessagePassing,
+                "TransformerEncoderReadout": TransformerEncoderReadout,
+            }
+            # save_weights_only=True,
         ),
         TensorBoard(
             log_dir=os.path.join("logs", f"{datetime.datetime.now():%Y-%m-%d_%H-%M}")
@@ -176,7 +216,7 @@ def train():
         callbacks=callbacks,
     )
 
-    mpnn.save_weights("./models/mpnn_1m.h5")
+    # mpnn.save_weights("./models/mpnn_100k.h5")
 
     plt.figure(figsize=(10, 6))
     plt.plot(history.history["f1"], label="train f1")
