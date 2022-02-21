@@ -1,14 +1,7 @@
 import numpy as np
-import pandas as pd
-import tensorflow as tf
 from rdkit import Chem
-from pathlib import Path
-
-DATA_PATH = Path(__file__).resolve().parents[2]
-smd_features = pd.read_csv(
-    DATA_PATH / "data/interim/smd_features/train.csv", index_col=0
-)
-smd_features = smd_features.drop("Active", axis=1)
+from tqdm.auto import tqdm
+import tensorflow as tf
 
 
 class Featurizer:
@@ -20,20 +13,15 @@ class Featurizer:
             self.features_mapping[k] = dict(zip(s, range(self.dim, len(s) + self.dim)))
             self.dim += len(s)
 
-    def encode(self, inputs, mol_idx=None):
+    def encode(self, inputs):
         output = np.zeros((self.dim,))
         for name_feature, feature_mapping in self.features_mapping.items():
-            if name_feature == "smd_features":
-                continue
 
             feature = getattr(self, name_feature)(inputs)
             if feature not in feature_mapping:
                 print(f"Warning: Feature {feature} was skipped")
                 continue
             output[feature_mapping[feature]] = 1.0
-
-        if mol_idx:
-            output[-758:] = smd_features.loc[mol_idx].to_list()
 
         return output
 
@@ -90,14 +78,14 @@ def molecule_from_smiles(smiles):
     return molecule
 
 
-def graph_from_molecule(mol_index, molecule, atom_featurizer, bond_featurizer):
+def graph_from_molecule(molecule, atom_featurizer, bond_featurizer):
     # Initialize graph
     atom_features = []
     bond_features = []
     pair_indices = []
 
     for atom in molecule.GetAtoms():
-        atom_features.append(atom_featurizer.encode(atom, mol_index))
+        atom_features.append(atom_featurizer.encode(atom))
 
         # Add self-loops
         pair_indices.append([atom.GetIdx(), atom.GetIdx()])
@@ -111,25 +99,20 @@ def graph_from_molecule(mol_index, molecule, atom_featurizer, bond_featurizer):
     return np.array(atom_features), np.array(bond_features), np.array(pair_indices)
 
 
-def graphs_from_smiles(mol_indexes, smiles_list, atom_featurizer, bond_featurizer):
+def graph_features_from_smiles(smiles_list, atom_featurizer, bond_featurizer):
     # Initialize graphs
     atom_features_list = []
     bond_features_list = []
-    pair_indices_list = []
 
-    for mol_index, smiles in zip(mol_indexes, smiles_list):
+    for smiles in tqdm(smiles_list):
         molecule = molecule_from_smiles(smiles)
         atom_features, bond_features, pair_indices = graph_from_molecule(
-            mol_index, molecule, atom_featurizer, bond_featurizer
+            molecule, atom_featurizer, bond_featurizer
         )
 
         atom_features_list.append(atom_features)
         bond_features_list.append(bond_features)
-        pair_indices_list.append(pair_indices)
 
-    # Convert lists to ragged tensors for tf.data.Dataset later on
-    return (
-        tf.ragged.constant(atom_features_list, dtype=tf.float32),
-        tf.ragged.constant(bond_features_list, dtype=tf.float32),
-        tf.ragged.constant(pair_indices_list, dtype=tf.int64),
-    )
+    max_len = len(max(atom_features_list, key=len))
+
+    return atom_features_list, bond_features_list

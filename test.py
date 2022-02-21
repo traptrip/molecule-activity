@@ -1,33 +1,24 @@
 import os
 from pathlib import Path
-import datetime
 
 import pandas as pd
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras import backend as K
-from tensorflow.keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
-from tensorflow_addons.optimizers import AdamW
 
-import matplotlib.pyplot as plt
 import warnings
 from rdkit import RDLogger
 
-from scripts.mpnn.utils import (
+from utils import (
     AtomFeaturizer,
     BondFeaturizer,
     graphs_from_smiles,
 )
-from scripts.mpnn.dataset import MPNNDataset
-from scripts.mpnn.mpnn import MPNNModel, MessagePassing, TransformerEncoderReadout
+
 
 DATA_PATH = Path("./data")
 SEED = 1234
 BATCH_SIZE = 256
 CLASS_WEIGHTS = {0: 1, 1: 26}
-THRESHOLD = 0.9
+THRESHOLD = 0.5
 
 # Temporary suppress tf logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
