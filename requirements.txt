@@ -1,0 +1,12 @@
+pydot
+pydotplus
+rdkit-pypi==2021.9.4
+tensorflow==2.8.0
+pandas
+scipy
+scikit-learn
+requests
+jupyter
+notebook
+matplotlib
+tqdm
