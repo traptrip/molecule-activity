@@ -9,3 +9,4 @@ requests
 jupyter
 notebook
 matplotlib
+tqdm

@@ -27,7 +27,7 @@ DATA_PATH = Path("./data")
 SEED = 1234
 BATCH_SIZE = 256
 CLASS_WEIGHTS = {0: 1, 1: 26}
-THRESHOLD = 0.9
+THRESHOLD = 0.8
 
 # Temporary suppress tf logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -113,26 +113,26 @@ def test():
     x_test = graphs_from_smiles(df.Smiles, atom_featurizer, bond_featurizer)
     y_test = [0] * len(df)
 
-    # mpnn = MPNNModel(
-    #     atom_dim=x_test[0][0][0].shape[0],
-    #     bond_dim=x_test[1][0][0].shape[0],
-    #     batch_size=BATCH_SIZE,
-    #     message_units=64,
-    #     message_steps=4,
-    #     num_attention_heads=8,
-    #     dense_units=512,
-    # )
-    # mpnn.load_weights("./models/mpnn_best.h5")
-
-    mpnn = tf.keras.models.load_model(
-        "./models/mpnn_best.h5",
-        custom_objects={
-            "MessagePassing": MessagePassing,
-            "TransformerEncoderReadout": TransformerEncoderReadout,
-            "f1": f1,
-            "AdamW": AdamW,
-        },
+    mpnn = MPNNModel(
+        atom_dim=x_test[0][0][0].shape[0],
+        bond_dim=x_test[1][0][0].shape[0],
+        batch_size=BATCH_SIZE,
+        message_units=64,
+        message_steps=4,
+        num_attention_heads=8,
+        dense_units=512,
     )
+    mpnn.load_weights("./models/mpnn_best.h5")
+
+    # mpnn = tf.keras.models.load_model(
+    #     "./models/mpnn_best.h5",
+    #     custom_objects={
+    #         "MessagePassing": MessagePassing,
+    #         "TransformerEncoderReadout": TransformerEncoderReadout,
+    #         "f1": f1,
+    #         "AdamW": AdamW,
+    #     },
+    # )
 
     test_dataset = MPNNDataset(x_test, y_test, batch_size=BATCH_SIZE)
     y_pred = [
